@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Código Rojo — HPP Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red: #C0392B;
+  --red-light: #FDECEA;
+  --red-mid: #E74C3C;
+  --amber: #D35400;
+  --amber-light: #FEF5EC;
+  --green: #1A6641;
+  --green-light: #EAF7F0;
+  --blue: #1A5276;
+  --blue-light: #EBF5FB;
+  --purple: #512E5F;
+  --purple-light: #F4ECF7;
+  --gray: #2C3E50;
+  --gray2: #5D6D7E;
+  --gray3: #AEB6BF;
+  --gray4: #F2F3F4;
+  --white: #FFFFFF;
+  --border: rgba(0,0,0,0.09);
+  --font: 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: var(--font); background: #F0F2F5; color: var(--gray); min-height: 100vh; }
+
+/* ── SCREENS ── */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: block; }
+
+/* ── WELCOME ── */
+#screen-welcome {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 2rem; text-align: center; background: var(--gray);
+}
+#screen-welcome.active { display: flex; }
+.welcome-badge {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--red-mid); background: rgba(231,76,60,0.15); border: 1px solid rgba(231,76,60,0.3);
+  padding: 6px 16px; border-radius: 99px; margin-bottom: 1.5rem;
+}
+.welcome-title { font-size: clamp(28px,6vw,48px); font-weight: 600; color: #fff; line-height: 1.15; margin-bottom: 0.75rem; }
+.welcome-sub { font-size: 15px; color: var(--gray3); margin-bottom: 2.5rem; max-width: 380px; }
+.welcome-btns { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 340px; }
+.btn-primary {
+  background: var(--red-mid); color: #fff; border: none; padding: 15px 24px;
+  border-radius: var(--radius); font-family: var(--font); font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: opacity 0.15s; width: 100%;
+}
+.btn-primary:active { opacity: 0.8; }
+.btn-secondary {
+  background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.2);
+  padding: 15px 24px; border-radius: var(--radius); font-family: var(--font);
+  font-size: 15px; font-weight: 400; cursor: pointer; transition: opacity 0.15s; width: 100%;
+}
+.btn-secondary:active { opacity: 0.7; }
+.divider-label { font-size: 12px; color: var(--gray3); margin: 4px 0; }
+
+/* ── JOIN FORM ── */
+#screen-join { background: var(--gray); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+#screen-join.active { display: flex; }
+.join-card { background: #fff; border-radius: 16px; padding: 2rem; width: 100%; max-width: 380px; }
+.join-card h2 { font-size: 20px; font-weight: 600; margin-bottom: 0.5rem; }
+.join-card p { font-size: 13px; color: var(--gray2); margin-bottom: 1.5rem; }
+.field-label { font-size: 12px; font-weight: 500; color: var(--gray2); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+.field-input {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--font); font-size: 15px; color: var(--gray); background: var(--gray4);
+  margin-bottom: 1rem; outline: none; transition: border-color 0.15s;
+}
+.field-input:focus { border-color: var(--red-mid); background: #fff; }
+.role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1.25rem; }
+.role-btn {
+  padding: 12px 8px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: #fff; cursor: pointer; text-align: center; transition: all 0.15s; font-family: var(--font);
+}
+.role-btn .role-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+.role-btn .role-name { font-size: 12px; font-weight: 500; color: var(--gray2); }
+.role-btn.selected { border-color: var(--red-mid); background: var(--red-light); }
+.role-btn.selected .role-name { color: var(--red); }
+.back-link { text-align: center; margin-top: 1rem; font-size: 13px; color: var(--gray3); cursor: pointer; }
+
+/* ── PLAYER SCREEN ── */
+#screen-player { background: #F0F2F5; }
+#screen-player.active { display: block; }
+.player-header {
+  background: var(--gray); color: #fff; padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10;
+}
+.player-header-left { display: flex; align-items: center; gap: 10px; }
+.pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: #E74C3C; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+.header-title { font-size: 14px; font-weight: 500; }
+.header-phase { font-size: 11px; color: var(--gray3); font-family: var(--mono); }
+.score-pill { background: rgba(231,76,60,0.2); color: var(--red-mid); font-family: var(--mono); font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 99px; }
+.player-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+/* Cards */
+.card { background: #fff; border-radius: var(--radius); border: 0.5px solid var(--border); overflow: hidden; }
+.card-header { padding: 14px 16px 0; }
+.card-body { padding: 14px 16px; }
+.card-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray2); margin-bottom: 10px; }
+.card-locked { padding: 20px 16px; text-align: center; color: var(--gray3); font-size: 13px; }
+.lock-icon { font-size: 28px; margin-bottom: 8px; display: block; }
+
+/* Caso clínico */
+.vitals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.vital { background: var(--gray4); border-radius: var(--radius-sm); padding: 8px 10px; text-align: center; }
+.vital-val { font-size: 15px; font-weight: 600; color: var(--gray); font-family: var(--mono); }
+.vital-lbl { font-size: 10px; color: var(--gray3); margin-top: 2px; }
+.vital.alert-vital { background: var(--red-light); }
+.vital.alert-vital .vital-val { color: var(--red); }
+.caso-text { font-size: 14px; line-height: 1.65; color: var(--gray); }
+.caso-highlight { background: var(--amber-light); border-left: 3px solid var(--amber); padding: 10px 12px; border-radius: 0; font-size: 13px; color: var(--amber); margin-top: 10px; }
+
+/* 4T */
+.cuatro-t-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.t-card { border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; cursor: pointer; transition: all 0.15s; }
+.t-card .t-letter { font-size: 22px; font-weight: 700; font-family: var(--mono); color: var(--gray3); }
+.t-card .t-name { font-size: 12px; font-weight: 500; color: var(--gray2); margin: 2px 0 6px; }
+.t-card .t-check { font-size: 11px; color: var(--gray3); }
+.t-card.selected { border-color: var(--red-mid); background: var(--red-light); }
+.t-card.selected .t-letter { color: var(--red); }
+.t-card.selected .t-check { color: var(--red); font-weight: 500; }
+.t-card.winner { border-color: var(--green); background: var(--green-light); }
+.t-card.winner .t-letter { color: var(--green); }
+
+/* Fármacos */
+.drug-list { display: flex; flex-direction: column; gap: 8px; }
+.drug-item { border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; cursor: pointer; transition: all 0.15s; display: flex; gap: 12px; align-items: flex-start; }
+.drug-item .drug-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--gray3); flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.drug-item.selected { border-color: var(--blue); background: var(--blue-light); }
+.drug-item.selected .drug-check { background: var(--blue); border-color: var(--blue); color: #fff; font-size: 12px; }
+.drug-item.danger { border-color: var(--red-mid); background: var(--red-light); }
+.drug-name { font-size: 14px; font-weight: 500; color: var(--gray); }
+.drug-dose { font-size: 11px; color: var(--gray2); font-family: var(--mono); margin-top: 2px; }
+.drug-line { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+.line-1 { color: var(--green); }
+.line-2 { color: var(--amber); }
+.line-adj { color: var(--blue); }
+
+/* Bakri */
+.bakri-steps { display: flex; flex-direction: column; gap: 0; }
+.bakri-step { display: flex; gap: 12px; padding: 12px 0; border-bottom: 0.5px solid var(--border); cursor: pointer; }
+.bakri-step:last-child { border-bottom: none; }
+.step-num-circle { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--gray3); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; font-family: var(--mono); color: var(--gray3); flex-shrink: 0; transition: all 0.15s; }
+.bakri-step.done .step-num-circle { background: var(--green); border-color: var(--green); color: #fff; }
+.step-text { font-size: 13px; color: var(--gray); line-height: 1.55; }
+.step-text em { font-style: normal; color: var(--blue); font-weight: 500; }
+
+/* Evidencia */
+.evidence-list { display: flex; flex-direction: column; gap: 8px; }
+.evidence-item { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; transition: all 0.15s; }
+.evidence-item.selected { border-color: var(--purple); background: var(--purple-light); }
+.ev-tag { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 99px; flex-shrink: 0; margin-top: 1px; }
+.ev-figo { background: #EBF5FB; color: #1A5276; }
+.ev-who { background: #EAF7F0; color: #1A6641; }
+.ev-acog { background: #F4ECF7; color: #512E5F; }
+.ev-imss { background: #FEF5EC; color: #D35400; }
+.ev-text { font-size: 12px; color: var(--gray2); line-height: 1.5; }
+
+/* Submit */
+.submit-btn {
+  width: 100%; padding: 16px; background: var(--red-mid); color: #fff;
+  border: none; border-radius: var(--radius); font-family: var(--font); font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: opacity 0.15s; margin-top: 4px;
+}
+.submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.submit-btn:not(:disabled):active { opacity: 0.85; }
+
+/* Notifications */
+.notif { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--gray); color: #fff; padding: 10px 20px; border-radius: 99px; font-size: 13px; z-index: 100; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+.notif.hidden { opacity: 0; }
+
+/* ── FACILITATOR SCREEN ── */
+#screen-facilitator { background: var(--gray); min-height: 100vh; }
+#screen-facilitator.active { display: block; }
+.fac-header { background: #1a252f; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+.fac-logo { font-family: var(--mono); font-size: 16px; font-weight: 600; color: #fff; }
+.fac-logo span { color: var(--red-mid); }
+.fac-timer { font-family: var(--mono); font-size: 24px; font-weight: 600; color: #fff; }
+.fac-timer.warning { color: #F39C12; }
+.fac-timer.danger { color: var(--red-mid); animation: pulse 1s infinite; }
+.fac-body { display: grid; grid-template-columns: 1fr 1fr; gap: 0; min-height: calc(100vh - 60px); }
+.fac-panel { padding: 24px; border-right: 1px solid rgba(255,255,255,0.08); }
+.fac-panel:last-child { border-right: none; }
+.fac-panel-title { font-family: var(--mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gray3); margin-bottom: 16px; }
+
+/* Phase control */
+.phase-track { display: flex; flex-direction: column; gap: 4px; margin-bottom: 24px; }
+.phase-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-sm); cursor: pointer; transition: background 0.15s; }
+.phase-item.active { background: rgba(231,76,60,0.15); }
+.phase-item.done { opacity: 0.5; }
+.phase-dot-fac { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.2); flex-shrink: 0; }
+.phase-item.active .phase-dot-fac { background: var(--red-mid); }
+.phase-item.done .phase-dot-fac { background: var(--green); }
+.phase-label { font-size: 13px; color: #fff; }
+.phase-time-label { font-size: 11px; color: var(--gray3); font-family: var(--mono); margin-left: auto; }
+.phase-btn { width: 100%; padding: 13px; background: var(--red-mid); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+.phase-btn:active { opacity: 0.8; }
+.phase-btn.secondary { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); margin-top: 8px; }
+
+/* Team cards */
+.team-grid { display: flex; flex-direction: column; gap: 10px; }
+.team-card { background: rgba(255,255,255,0.06); border-radius: var(--radius-sm); padding: 14px; border: 1px solid rgba(255,255,255,0.08); }
+.team-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.team-name { font-size: 14px; font-weight: 500; color: #fff; }
+.team-score-badge { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--red-mid); }
+.team-progress-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
+.team-progress-fill { height: 100%; background: var(--red-mid); border-radius: 2px; transition: width 0.5s; }
+.team-members { display: flex; flex-wrap: wrap; gap: 6px; }
+.member-chip { font-size: 11px; padding: 3px 10px; border-radius: 99px; background: rgba(255,255,255,0.08); color: var(--gray3); }
+.member-chip.online { background: rgba(26,102,65,0.3); color: #5DCAA5; }
+
+/* Live log */
+.live-log { display: flex; flex-direction: column; gap: 6px; max-height: 400px; overflow-y: auto; }
+.log-entry { display: flex; gap: 10px; padding: 8px 12px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.04); align-items: flex-start; }
+.log-time { font-family: var(--mono); font-size: 10px; color: var(--gray3); flex-shrink: 0; margin-top: 2px; }
+.log-text { font-size: 12px; color: rgba(255,255,255,0.8); line-height: 1.5; }
+.log-pts { font-family: var(--mono); font-size: 11px; font-weight: 600; margin-left: auto; flex-shrink: 0; }
+.log-pts.pos { color: #5DCAA5; }
+.log-pts.neg { color: var(--red-mid); }
+
+/* Caso reveal */
+.sobre-card { background: rgba(255,255,255,0.06); border-radius: var(--radius-sm); padding: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px; }
+.sobre-num { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--gray3); margin-bottom: 8px; }
+.sobre-text { font-size: 13px; color: rgba(255,255,255,0.8); line-height: 1.65; }
+.sobre-reveal-btn { width: 100%; padding: 10px; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; cursor: pointer; margin-top: 8px; transition: background 0.15s; }
+.sobre-reveal-btn:hover { background: rgba(255,255,255,0.14); }
+.sobre-reveal-btn.revealed { background: rgba(26,102,65,0.3); border-color: rgba(93,202,165,0.3); color: #5DCAA5; }
+
+/* Completed overlay */
+.completed-banner { background: rgba(26,102,65,0.2); border: 1px solid rgba(93,202,165,0.3); border-radius: var(--radius); padding: 16px; text-align: center; color: #5DCAA5; font-size: 15px; font-weight: 500; }
+.completed-score { font-family: var(--mono); font-size: 32px; font-weight: 700; display: block; margin-bottom: 4px; }
+
+/* Responsive facilitator */
+@media (max-width: 700px) {
+  .fac-body { grid-template-columns: 1fr; }
+  .fac-panel { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); }
+}
+@media (min-width: 900px) {
+  .fac-body { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* Score result screen */
+#screen-done { background: var(--gray); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; text-align: center; }
+#screen-done.active { display: flex; }
+.done-score { font-family: var(--mono); font-size: 72px; font-weight: 700; color: var(--red-mid); line-height: 1; margin-bottom: 0.5rem; }
+.done-label { font-size: 14px; color: var(--gray3); margin-bottom: 2rem; }
+.done-breakdown { background: rgba(255,255,255,0.06); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 340px; text-align: left; margin-bottom: 1.5rem; }
+.breakdown-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid rgba(255,255,255,0.08); font-size: 13px; color: rgba(255,255,255,0.75); }
+.breakdown-row:last-child { border-bottom: none; }
+.breakdown-pts { font-family: var(--mono); font-weight: 600; }
+.pts-pos { color: #5DCAA5; }
+.pts-neg { color: var(--red-mid); }
+</style>
+</head>
+<body>
+
+<!-- NOTIFICATION TOAST -->
+<div class="notif hidden" id="notif"></div>
+
+<!-- ══════════════════ WELCOME ══════════════════ -->
+<div class="screen active" id="screen-welcome">
+  <span class="welcome-badge">Simulación clínica interactiva</span>
+  <h1 class="welcome-title">Código<br>Rojo</h1>
+  <p class="welcome-sub">Manejo inicial de hemorragia obstétrica · Balón de Bakri®</p>
+  <div class="welcome-btns">
+    <button class="btn-primary" onclick="goTo('join')">Unirse como participante</button>
+    <div class="divider-label">o</div>
+    <button class="btn-secondary" onclick="goTo('facilitator')">Vista del facilitador</button>
+  </div>
+</div>
+
+<!-- ══════════════════ JOIN ══════════════════ -->
+<div class="screen" id="screen-join">
+  <div class="join-card">
+    <h2>Unirse al caso</h2>
+    <p>Ingresa tu nombre y elige tu rol en el equipo de guardia.</p>
+    <label class="field-label">Tu nombre</label>
+    <input class="field-input" id="join-name" type="text" placeholder="Ej. Valentina Cruz" maxlength="30">
+    <label class="field-label">Tu rol</label>
+    <div class="role-grid" id="role-grid">
+      <div class="role-btn" onclick="selectRole('lider')" id="role-lider">
+        <span class="role-icon">🩺</span>
+        <span class="role-name">Líder clínico</span>
+      </div>
+      <div class="role-btn" onclick="selectRole('farmaco')" id="role-farmaco">
+        <span class="role-icon">💊</span>
+        <span class="role-name">Farmacólogo</span>
+      </div>
+      <div class="role-btn" onclick="selectRole('instrumentista')" id="role-instrumentista">
+        <span class="role-icon">🔧</span>
+        <span class="role-name">Instrumentista</span>
+      </div>
+      <div class="role-btn" onclick="selectRole('ebm')" id="role-ebm">
+        <span class="role-icon">📚</span>
+        <span class="role-name">Vigilante EBM</span>
+      </div>
+      <div class="role-btn" onclick="selectRole('vocero')" id="role-vocero">
+        <span class="role-icon">🎤</span>
+        <span class="role-name">Vocero</span>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="joinSession()">Entrar al caso clínico</button>
+    <div class="back-link" onclick="goTo('welcome')">← Volver</div>
+  </div>
+</div>
+
+<!-- ══════════════════ PLAYER ══════════════════ -->
+<div class="screen" id="screen-player">
+  <div class="player-header">
+    <div class="player-header-left">
+      <div class="pulse-dot"></div>
+      <div>
+        <div class="header-title" id="p-header-name">Código Rojo</div>
+        <div class="header-phase" id="p-header-phase">Fase 1</div>
+      </div>
+    </div>
+    <div class="score-pill" id="p-score">0 pts</div>
+  </div>
+  <div class="player-body" id="player-body">
+    <!-- dynamic content -->
+  </div>
+</div>
+
+<!-- ══════════════════ DONE ══════════════════ -->
+<div class="screen" id="screen-done">
+  <div class="done-score" id="done-score">0</div>
+  <div class="done-label">puntos totales</div>
+  <div class="done-breakdown" id="done-breakdown"></div>
+  <button class="btn-secondary" onclick="goTo('welcome')">Nueva sesión</button>
+</div>
+
+<!-- ══════════════════ FACILITATOR ══════════════════ -->
+<div class="screen" id="screen-facilitator">
+  <div class="fac-header">
+    <div class="fac-logo"><span>//</span> CÓDIGO ROJO · Panel del facilitador</div>
+    <div class="fac-timer" id="fac-timer">90:00</div>
+  </div>
+  <div class="fac-body">
+
+    <!-- Panel 1: Fases -->
+    <div class="fac-panel">
+      <div class="fac-panel-title">Control de fases</div>
+      <div class="phase-track" id="phase-track">
+        <div class="phase-item active" data-phase="0">
+          <div class="phase-dot-fac"></div>
+          <span class="phase-label">Briefing y roles</span>
+          <span class="phase-time-label">0–10 min</span>
+        </div>
+        <div class="phase-item" data-phase="1">
+          <div class="phase-dot-fac"></div>
+          <span class="phase-label">Reconocimiento HPP</span>
+          <span class="phase-time-label">10–25 min</span>
+        </div>
+        <div class="phase-item" data-phase="2">
+          <div class="phase-dot-fac"></div>
+          <span class="phase-label">Manejo escalonado</span>
+          <span class="phase-time-label">25–55 min</span>
+        </div>
+        <div class="phase-item" data-phase="3">
+          <div class="phase-dot-fac"></div>
+          <span class="phase-label">Bakri Challenge</span>
+          <span class="phase-time-label">55–75 min</span>
+        </div>
+        <div class="phase-item" data-phase="4">
+          <div class="phase-dot-fac"></div>
+          <span class="phase-label">Debriefing</span>
+          <span class="phase-time-label">75–90 min</span>
+        </div>
+      </div>
+      <button class="phase-btn" onclick="advancePhase()">Avanzar a siguiente fase →</button>
+      <button class="phase-btn secondary" onclick="toggleTimer()">⏸ Pausar / reanudar</button>
+      <div style="margin-top:20px">
+        <div class="fac-panel-title">Caso clínico — sobres</div>
+        <div class="sobre-card">
+          <div class="sobre-num">SOBRE 1 — PRESENTACIÓN INICIAL</div>
+          <div class="sobre-text">Sandra M., 28a. G2P1. Parto vaginal hace 30 min. TA 90/60 · FC 118 · SpO₂ 96%. Útero blando, mal contraído. Sangrado activo 600 ml.</div>
+          <button class="sobre-reveal-btn" id="btn-sobre1" onclick="revealSobre(1)">Revelar a participantes</button>
+        </div>
+        <div class="sobre-card">
+          <div class="sobre-num">SOBRE 2 — EVOLUCIÓN (15 min)</div>
+          <div class="sobre-text">Sangrado acumula 900 ml. TA 82/50. Útero sigue blando. Sangre solicitada. ¿Decide el equipo Bakri®?</div>
+          <button class="sobre-reveal-btn" id="btn-sobre2" onclick="revealSobre(2)">Revelar cuando proceda</button>
+        </div>
+        <div class="sobre-card">
+          <div class="sobre-num">SOBRE 3 — RESOLUCIÓN (debriefing)</div>
+          <div class="sobre-text">Tras Bakri® 350 ml, sangrado cede en 20 min. Paciente se estabiliza. Traslado a UCI obstétrica.</div>
+          <button class="sobre-reveal-btn" id="btn-sobre3" onclick="revealSobre(3)">Revelar al cierre</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Equipos en vivo -->
+    <div class="fac-panel">
+      <div class="fac-panel-title">Participantes en vivo</div>
+      <div class="team-grid" id="team-grid">
+        <div style="font-size:13px;color:var(--gray3);padding:20px 0;text-align:center">Esperando participantes...</div>
+      </div>
+    </div>
+
+    <!-- Panel 3: Log de decisiones -->
+    <div class="fac-panel">
+      <div class="fac-panel-title">Registro de decisiones</div>
+      <div class="live-log" id="live-log">
+        <div style="font-size:12px;color:var(--gray3);padding:12px 0;text-align:center">El log aparece aquí en tiempo real</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+const DB_KEY = 'hpp_session_v4';
+const TICK = 2000;
+
+let myPlayer = JSON.parse(localStorage.getItem('hpp_player') || 'null');
+let timerInterval = null;
+let pollInterval = null;
+let timerPaused = false;
+
+// ── Initial session state ──
+function defaultSession() {
+  return {
+    phase: 0,
+    sobreRevealed: [false, false, false],
+    timerStart: Date.now(),
+    timerPaused: false,
+    timerElapsed: 0,
+    players: {},
+    log: []
+  };
+}
+
+async function loadSession() {
+  try {
+    const r = await window.storage.get(DB_KEY, true);
+    return r ? JSON.parse(r.value) : defaultSession();
+  } catch(e) { return defaultSession(); }
+}
+
+async function saveSession(s) {
+  try { await window.storage.set(DB_KEY, JSON.stringify(s), true); } catch(e) {}
+}
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+// ══════════════════════════════════════
+// JOIN
+// ══════════════════════════════════════
+let selectedRole = null;
+function selectRole(r) {
+  selectedRole = r;
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('role-' + r).classList.add('selected');
+}
+
+async function joinSession() {
+  const name = document.getElementById('join-name').value.trim();
+  if (!name) { showNotif('Escribe tu nombre'); return; }
+  if (!selectedRole) { showNotif('Elige un rol'); return; }
+
+  myPlayer = { id: name + '_' + Date.now(), name, role: selectedRole, score: 0, choices: {}, online: true };
+  localStorage.setItem('hpp_player', JSON.stringify(myPlayer));
+
+  const s = await loadSession();
+  s.players[myPlayer.id] = myPlayer;
+  await saveSession(s);
+
+  goTo('player');
+  renderPlayer(s);
+  startPlayerPoll();
+}
+
+// ══════════════════════════════════════
+// PLAYER SCREEN
+// ══════════════════════════════════════
+const PHASES = [
+  { label: 'Fase 0 · Briefing', title: 'Preparación' },
+  { label: 'Fase 1 · Reconocimiento', title: '¿Es hemorragia obstétrica?' },
+  { label: 'Fase 2 · Manejo inicial', title: 'Tratamiento escalonado' },
+  { label: 'Fase 3 · Bakri Challenge', title: 'Balón de Bakri®' },
+  { label: 'Fase 4 · Debriefing', title: 'Reflexión y cierre' }
+];
+
+function renderPlayer(s) {
+  const ph = s.phase;
+  document.getElementById('p-header-phase').textContent = PHASES[ph].label;
+  document.getElementById('p-header-name').textContent = myPlayer.name;
+  document.getElementById('p-score').textContent = (myPlayer.score || 0) + ' pts';
+  const body = document.getElementById('player-body');
+  body.innerHTML = '';
+  if (ph === 0) body.innerHTML = renderPhase0(s);
+  else if (ph === 1) body.innerHTML = renderPhase1(s);
+  else if (ph === 2) body.innerHTML = renderPhase2(s);
+  else if (ph === 3) body.innerHTML = renderPhase3(s);
+  else if (ph === 4) body.innerHTML = renderPhase4(s);
+  attachHandlers(ph, s);
+}
+
+function renderPhase0(s) {
+  return `
+  <div class="card"><div class="card-body">
+    <div class="card-title">Bienvenida</div>
+    <p class="caso-text">El facilitador está configurando la sesión. Tu rol: <strong>${roleLabel(myPlayer.role)}</strong>.<br><br>En unos momentos recibirás el caso clínico. Mantén el caso en tu pantalla y coordina con tu equipo.</p>
+    <div class="caso-highlight">Espera la señal del facilitador para comenzar.</div>
+  </div></div>`;
+}
+
+function renderPhase1(s) {
+  const rev = s.sobreRevealed[0];
+  const ch = myPlayer.choices || {};
+  const t4 = ch.t4 || null;
+  return `
+  ${rev ? `
+  <div class="card">
+    <div class="card-header"><div class="card-title">Caso clínico · Sobre 1</div></div>
+    <div class="card-body">
+      <div class="vitals-grid">
+        <div class="vital alert-vital"><div class="vital-val">90/60</div><div class="vital-lbl">TA mmHg</div></div>
+        <div class="vital alert-vital"><div class="vital-val">118</div><div class="vital-lbl">FC lpm</div></div>
+        <div class="vital"><div class="vital-val">96%</div><div class="vital-lbl">SpO₂</div></div>
+        <div class="vital"><div class="vital-val">22</div><div class="vital-lbl">FR rpm</div></div>
+        <div class="vital"><div class="vital-val">36.8</div><div class="vital-lbl">T° °C</div></div>
+        <div class="vital alert-vital"><div class="vital-val">600ml</div><div class="vital-lbl">Sangrado</div></div>
+      </div>
+      <p class="caso-text" style="margin-top:12px">Sandra M., 28 años. G2P1. Parto vaginal espontáneo hace <strong>30 minutos</strong>. RN femenino 3,450 g. Placenta expulsada completa. Útero blando, mal contraído, a nivel umbilical. Sangrado activo por vagina. Sin laceraciones visibles. Sin antecedentes de coagulopatía.</p>
+      <div class="caso-highlight">Pérdida sanguínea estimada: 600 ml en toalla perineal saturada.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Las 4T · Identifica la causa</div></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--gray2);margin-bottom:12px">Selecciona la causa principal de esta HPP:</p>
+      <div class="cuatro-t-grid" id="t4-grid">
+        ${['Tono','Trauma','Tejido','Trombina'].map((t,i)=>{
+          const key = ['tono','trauma','tejido','trombina'][i];
+          const cls = t4 === key ? (key==='tono' ? 'winner' : 'selected') : '';
+          const desc = ['Atonía uterina — útero no contrae','Laceraciones, inversión, ruptura','Retención de restos placentarios','Coagulopatía, CID'][i];
+          return `<div class="t-card ${cls}" data-t="${key}">
+            <div class="t-letter">T</div>
+            <div class="t-name">${t}</div>
+            <div class="t-check">${desc}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      ${t4 ? `<div style="margin-top:12px"><button class="submit-btn" onclick="submitT4()">Confirmar diagnóstico</button></div>` : ''}
+    </div>
+  </div>` : `
+  <div class="card"><div class="card-body">
+    <span class="lock-icon">🔒</span>
+    <p class="card-locked">El facilitador aún no ha revelado el caso clínico.<br>Mantente atento.</p>
+  </div></div>`}`;
+}
+
+function renderPhase2(s) {
+  const rev1 = s.sobreRevealed[0];
+  const rev2 = s.sobreRevealed[1];
+  const ch = myPlayer.choices || {};
+  const drugs = ch.drugs || [];
+  const evidence = ch.evidence || [];
+
+  const drugData = [
+    { id:'oxitocina', name:'Oxitocina', dose:'10 UI IV lenta (o 40 UI en 500 ml)', line:'1', linelbl:'1ª línea OMS/FIGO', danger:false },
+    { id:'carbetocina', name:'Carbetocina', dose:'100 mcg IV (solo poscesárea)', line:'1', linelbl:'1ª línea alternativa', danger:false },
+    { id:'misoprostol', name:'Misoprostol', dose:'800 mcg sublingual', line:'adj', linelbl:'Si oxitocina no disponible', danger:false },
+    { id:'tranexamico', name:'Ácido tranexámico', dose:'1 g IV en 10 min (≤3 h parto)', line:'adj', linelbl:'Adyuvante obligatorio', danger:false },
+    { id:'ergometrina', name:'Ergometrina/metilergometrina', dose:'0.2 mg IM', line:'2', linelbl:'2ª línea — contraindicada en HTA', danger:false },
+    { id:'carboprost', name:'Carboprost (PGF2α)', dose:'250 mcg IM c/15min máx 8 dosis', line:'2', linelbl:'2ª línea — contraindicado en asma', danger:false },
+    { id:'cristaloides', name:'Cristaloides IV', dose:'SSN 0.9% o Hartmann 1-2 L rápido', line:'adj', linelbl:'Reposición de volumen', danger:false }
+  ];
+  const evData = [
+    { id:'figo_oxitocina', tag:'FIGO 2022', cls:'ev-figo', text:'Oxitocina es el uterotónico de elección para prevención y tratamiento de HPP.' },
+    { id:'who_tranex', tag:'OMS', cls:'ev-who', text:'Ácido tranexámico debe administrarse dentro de las 3 h del parto, independientemente de la causa.' },
+    { id:'acog_4t', tag:'ACOG PB 183', cls:'ev-acog', text:'La evaluación estructurada por las 4T orienta el diagnóstico etiológico y el tratamiento de HPP.' },
+    { id:'imss_bakri', tag:'GPC-IMSS', cls:'ev-imss', text:'El balón de Bakri está indicado en HPP por atonía refractaria a uterotónicos, antes de cirugía.' }
+  ];
+
+  return `
+  ${rev2 ? `<div class="card"><div class="card-header"><div class="card-title">Sobre 2 · Evolución (15 min)</div></div>
+    <div class="card-body">
+      <p class="caso-text" style="color:var(--red)">Sangrado acumula <strong>900 ml</strong>. TA 82/50. Útero persiste blando. Banco de sangre notificado.</p>
+      <div class="caso-highlight">El equipo debe decidir: ¿Es momento del Balón de Bakri®?</div>
+    </div></div>` : ''}
+  <div class="card">
+    <div class="card-header"><div class="card-title">Tratamiento · Selecciona intervenciones</div></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--gray2);margin-bottom:12px">Elige todas las que aplicarías en este momento:</p>
+      <div class="drug-list" id="drug-list">
+        ${drugData.map(d => {
+          const sel = drugs.includes(d.id);
+          return `<div class="drug-item ${sel?'selected':''}" data-drug="${d.id}">
+            <div class="drug-check">${sel?'✓':''}</div>
+            <div>
+              <div class="drug-name">${d.name}</div>
+              <div class="drug-dose">${d.dose}</div>
+              <div class="drug-line ${d.line==='1'?'line-1':d.line==='2'?'line-2':'line-adj'}">${d.linelbl}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="submit-btn" style="margin-top:12px" onclick="submitDrugs()">Confirmar selección de fármacos</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Evidencia · Cita tu fuente</div></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--gray2);margin-bottom:12px">Selecciona las fuentes que respaldan tus decisiones:</p>
+      <div class="evidence-list" id="ev-list">
+        ${evData.map(e => {
+          const sel = evidence.includes(e.id);
+          return `<div class="evidence-item ${sel?'selected':''}" data-ev="${e.id}">
+            <span class="ev-tag ${e.cls}">${e.tag}</span>
+            <div class="ev-text">${e.text}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="submit-btn" style="margin-top:12px" onclick="submitEvidence()">Confirmar citas</button>
+    </div>
+  </div>`;
+}
+
+function renderPhase3(s) {
+  const ch = myPlayer.choices || {};
+  const bakri = ch.bakri || [];
+  const steps = [
+    { id:'b1', text:'Verificar indicación y descartar contraindicaciones (acretismo grado III, laceración sin reparar, infección activa).' },
+    { id:'b2', text:'Obtener consentimiento informado y preparar campo estéril con material completo.' },
+    { id:'b3', text:'Confirmar analgesia adecuada · colocar en posición de litotomía.' },
+    { id:'b4', text:'Introducir balón desinflado con guía digital o valvas de Doyen hasta cavidad uterina. El catéter atraviesa el cérvix.' },
+    { id:'b5', text:'Inflar con SSN tibia: iniciar con <em>250 ml</em>, evaluar respuesta. Aumentar hasta máximo <em>500 ml</em>.' },
+    { id:'b6', text:'Prueba de la bolsa: conectar bolsa de drenaje. Si <em>drena < 50 ml en 1 h</em> → tamponamiento exitoso.' },
+    { id:'b7', text:'Fijar catéter con tensión suave. Documentar volumen, hora y responsable.' },
+    { id:'b8', text:'Monitorización c/15 min. Planear retiro en <em>12–24 h</em> bajo vigilancia estrecha.' }
+  ];
+  return `
+  <div class="card">
+    <div class="card-header"><div class="card-title">Bakri Challenge · Completa los pasos</div></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--gray2);margin-bottom:12px">Marca cada paso conforme lo analizan en equipo:</p>
+      <div class="bakri-steps" id="bakri-steps">
+        ${steps.map((st,i) => `
+          <div class="bakri-step ${bakri.includes(st.id)?'done':''}" data-step="${st.id}">
+            <div class="step-num-circle">${bakri.includes(st.id)?'✓':(i+1)}</div>
+            <div class="step-text">${st.text}</div>
+          </div>`).join('')}
+      </div>
+      <button class="submit-btn" style="margin-top:16px" onclick="submitBakri()">Confirmar secuencia Bakri®</button>
+    </div>
+  </div>`;
+}
+
+function renderPhase4(s) {
+  return `
+  <div class="card"><div class="card-body">
+    <div class="card-title">Debriefing final</div>
+    <p class="caso-text">El facilitador está guiando la reflexión grupal. Prepara tu <strong>Ficha de Decisiones</strong> con tu equipo:</p>
+    <ol style="margin:12px 0 0 18px;font-size:14px;line-height:2;color:var(--gray2)">
+      <li>Diagnóstico: causa de HPP y signo guía</li>
+      <li>Línea de tiempo de intervenciones</li>
+      <li>Farmacología: dosis y justificación</li>
+      <li>Indicación y resultado del Bakri®</li>
+      <li>Una cita por decisión clave</li>
+      <li>Reflexión: ¿qué harías diferente?</li>
+    </ol>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="card-title">Tu puntaje final</div>
+    <div style="text-align:center;padding:16px 0">
+      <div style="font-family:var(--mono);font-size:48px;font-weight:700;color:var(--red)">${myPlayer.score || 0}</div>
+      <div style="font-size:13px;color:var(--gray2)">puntos · máximo 110</div>
+    </div>
+    <button class="submit-btn" onclick="finishGame()">Ver desglose de puntaje</button>
+  </div></div>`;
+}
+
+// ══════════════════════════════════════
+// HANDLERS
+// ══════════════════════════════════════
+function attachHandlers(ph, s) {
+  if (ph === 1) {
+    document.querySelectorAll('#t4-grid .t-card').forEach(c => {
+      c.addEventListener('click', () => {
+        document.querySelectorAll('#t4-grid .t-card').forEach(x => x.classList.remove('selected','winner'));
+        c.classList.add('selected');
+        myPlayer.choices = myPlayer.choices || {};
+        myPlayer.choices.t4 = c.dataset.t;
+        document.getElementById('player-body').querySelectorAll('.submit-btn').forEach(b => b.style.display = 'block');
+        loadSession().then(s => renderPlayer(s));
+      });
+    });
+  }
+  if (ph === 2) {
+    document.querySelectorAll('#drug-list .drug-item').forEach(d => {
+      d.addEventListener('click', () => {
+        d.classList.toggle('selected');
+        d.querySelector('.drug-check').textContent = d.classList.contains('selected') ? '✓' : '';
+        myPlayer.choices = myPlayer.choices || {};
+        myPlayer.choices.drugs = [...document.querySelectorAll('#drug-list .drug-item.selected')].map(x => x.dataset.drug);
+      });
+    });
+    document.querySelectorAll('#ev-list .evidence-item').forEach(e => {
+      e.addEventListener('click', () => {
+        e.classList.toggle('selected');
+        myPlayer.choices = myPlayer.choices || {};
+        myPlayer.choices.evidence = [...document.querySelectorAll('#ev-list .evidence-item.selected')].map(x => x.dataset.ev);
+      });
+    });
+  }
+  if (ph === 3) {
+    document.querySelectorAll('#bakri-steps .bakri-step').forEach(step => {
+      step.addEventListener('click', () => {
+        step.classList.toggle('done');
+        const circle = step.querySelector('.step-num-circle');
+        const idx = [...step.parentNode.children].indexOf(step) + 1;
+        circle.textContent = step.classList.contains('done') ? '✓' : idx;
+        myPlayer.choices = myPlayer.choices || {};
+        myPlayer.choices.bakri = [...document.querySelectorAll('#bakri-steps .bakri-step.done')].map(x => x.dataset.step);
+      });
+    });
+  }
+}
+
+// ══════════════════════════════════════
+// SUBMIT ACTIONS
+// ══════════════════════════════════════
+async function submitT4() {
+  const t = (myPlayer.choices || {}).t4;
+  if (!t) return;
+  const correct = t === 'tono';
+  let pts = correct ? 15 : -5;
+  myPlayer.score = (myPlayer.score || 0) + pts;
+  const s = await loadSession();
+  s.players[myPlayer.id] = myPlayer;
+  addLog(s, myPlayer.name, `Diagnóstico 4T: ${t}`, pts);
+  await saveSession(s);
+  localStorage.setItem('hpp_player', JSON.stringify(myPlayer));
+  showNotif(correct ? `¡Correcto! Atonía uterina +${pts} pts` : `Causa incorrecta ${pts} pts`);
+  document.getElementById('p-score').textContent = myPlayer.score + ' pts';
+}
+
+async function submitDrugs() {
+  const drugs = (myPlayer.choices || {}).drugs || [];
+  let pts = 0;
+  const correct = ['oxitocina','tranexamico'];
+  const bad = ['ergometrina','carboprost'];
+  correct.forEach(d => { if (drugs.includes(d)) pts += 10; });
+  bad.forEach(d => { if (drugs.includes(d)) pts -= 10; });
+  if (drugs.includes('oxitocina') && drugs.includes('tranexamico')) pts += 5;
+  myPlayer.score = (myPlayer.score || 0) + pts;
+  const s = await loadSession();
+  s.players[myPlayer.id] = myPlayer;
+  addLog(s, myPlayer.name, `Fármacos: ${drugs.join(', ')}`, pts);
+  await saveSession(s);
+  localStorage.setItem('hpp_player', JSON.stringify(myPlayer));
+  showNotif(`Fármacos confirmados · ${pts >= 0 ? '+' : ''}${pts} pts`);
+  document.getElementById('p-score').textContent = myPlayer.score + ' pts';
+}
+
+async function submitEvidence() {
+  const ev = (myPlayer.choices || {}).evidence || [];
+  const pts = Math.min(ev.length * 5, 20);
+  myPlayer.score = (myPlayer.score || 0) + pts;
+  const s = await loadSession();
+  s.players[myPlayer.id] = myPlayer;
+  addLog(s, myPlayer.name, `${ev.length} cita(s) EBM`, pts);
+  await saveSession(s);
+  localStorage.setItem('hpp_player', JSON.stringify(myPlayer));
+  showNotif(`Evidencia registrada +${pts} pts`);
+  document.getElementById('p-score').textContent = myPlayer.score + ' pts';
+}
+
+async function submitBakri() {
+  const bakri = (myPlayer.choices || {}).bakri || [];
+  const correct = ['b1','b2','b3','b4','b5','b6','b7','b8'];
+  const done = correct.filter(s => bakri.includes(s));
+  let pts = done.length * 5;
+  const hasBonus = bakri.includes('b6') && bakri.includes('b5');
+  if (hasBonus) pts += 10;
+  myPlayer.score = (myPlayer.score || 0) + pts;
+  const s = await loadSession();
+  s.players[myPlayer.id] = myPlayer;
+  addLog(s, myPlayer.name, `Bakri: ${done.length}/8 pasos`, pts);
+  await saveSession(s);
+  localStorage.setItem('hpp_player', JSON.stringify(myPlayer));
+  showNotif(`Bakri® confirmado +${pts} pts`);
+  document.getElementById('p-score').textContent = myPlayer.score + ' pts';
+}
+
+function finishGame() {
+  const score = myPlayer.score || 0;
+  document.getElementById('done-score').textContent = score;
+  const ch = myPlayer.choices || {};
+  const rows = [
+    ['Diagnóstico 4T', ch.t4 === 'tono' ? '+15' : '-5', ch.t4 === 'tono'],
+    ['Fármacos correctos', '+hasta 25', null],
+    ['Evidencia EBM', `+${Math.min(((ch.evidence||[]).length)*5,20)}`, null],
+    ['Pasos Bakri®', `+${Math.min(((ch.bakri||[]).length)*5,40)}`, null]
+  ];
+  document.getElementById('done-breakdown').innerHTML = rows.map(r =>
+    `<div class="breakdown-row"><span>${r[0]}</span><span class="breakdown-pts ${r[2]===true?'pts-pos':r[2]===false?'pts-neg':''}">${r[1]}</span></div>`
+  ).join('') + `<div class="breakdown-row" style="font-weight:600"><span>Total</span><span class="breakdown-pts pts-pos">${score} / 110</span></div>`;
+  goTo('done');
+}
+
+// ══════════════════════════════════════
+// PLAYER POLL
+// ══════════════════════════════════════
+function startPlayerPoll() {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    const s = await loadSession();
+    if (!s) return;
+    myPlayer.online = true;
+    s.players[myPlayer.id] = myPlayer;
+    await saveSession(s);
+    renderPlayer(s);
+  }, TICK);
+}
+
+// ══════════════════════════════════════
+// FACILITATOR
+// ══════════════════════════════════════
+let facPhase = 0;
+let timerSec = 90 * 60;
+let facPollInt = null;
+
+function initFacilitator() {
+  startFacTimer();
+  facPollInt = setInterval(pollFacilitator, TICK);
+  pollFacilitator();
+}
+
+async function pollFacilitator() {
+  const s = await loadSession();
+  if (!s) return;
+  facPhase = s.phase || 0;
+  updatePhaseTrack(facPhase);
+  renderTeamGrid(s);
+  renderLog(s);
+  updateSobreButtons(s);
+}
+
+function updatePhaseTrack(ph) {
+  document.querySelectorAll('.phase-item').forEach((el, i) => {
+    el.classList.remove('active','done');
+    if (i === ph) el.classList.add('active');
+    else if (i < ph) el.classList.add('done');
+  });
+}
+
+async function advancePhase() {
+  const s = await loadSession();
+  if (s.phase < 4) {
+    s.phase++;
+    addLog(s, 'Facilitador', `Avanzó a Fase ${s.phase}`, 0);
+    await saveSession(s);
+    pollFacilitator();
+  }
+}
+
+function renderTeamGrid(s) {
+  const players = Object.values(s.players || {});
+  const grid = document.getElementById('team-grid');
+  if (!players.length) { grid.innerHTML = '<div style="font-size:13px;color:var(--gray3);padding:20px 0;text-align:center">Esperando participantes...</div>'; return; }
+  grid.innerHTML = players.map(p => {
+    const pct = Math.min(Math.round((p.score || 0) / 110 * 100), 100);
+    return `<div class="team-card">
+      <div class="team-card-header">
+        <span class="team-name">${p.name}</span>
+        <span class="team-score-badge">${p.score || 0} pts</span>
+      </div>
+      <div class="team-progress-bar"><div class="team-progress-fill" style="width:${pct}%"></div></div>
+      <div class="team-members">
+        <span class="member-chip online">${roleLabel(p.role)}</span>
+        ${p.online ? '<span class="member-chip online">en línea</span>' : '<span class="member-chip">desconectado</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderLog(s) {
+  const log = (s.log || []).slice(-30).reverse();
+  const el = document.getElementById('live-log');
+  if (!log.length) return;
+  el.innerHTML = log.map(e => `
+    <div class="log-entry">
+      <span class="log-time">${e.time}</span>
+      <span class="log-text"><strong>${e.player}</strong>: ${e.action}</span>
+      ${e.pts !== 0 ? `<span class="log-pts ${e.pts>0?'pos':'neg'}">${e.pts>0?'+':''}${e.pts}</span>` : ''}
+    </div>`).join('');
+}
+
+function updateSobreButtons(s) {
+  [1,2,3].forEach(i => {
+    const btn = document.getElementById('btn-sobre' + i);
+    if (btn && s.sobreRevealed[i-1]) {
+      btn.textContent = 'Revelado ✓';
+      btn.classList.add('revealed');
+    }
+  });
+}
+
+async function revealSobre(n) {
+  const s = await loadSession();
+  s.sobreRevealed[n-1] = true;
+  addLog(s, 'Facilitador', `Reveló Sobre ${n}`, 0);
+  await saveSession(s);
+  updateSobreButtons(s);
+  showNotif(`Sobre ${n} revelado a participantes`);
+}
+
+// ══════════════════════════════════════
+// TIMER
+// ══════════════════════════════════════
+function startFacTimer() {
+  timerInterval = setInterval(() => {
+    if (timerPaused) return;
+    timerSec--;
+    if (timerSec < 0) timerSec = 0;
+    const m = Math.floor(timerSec / 60);
+    const ss = timerSec % 60;
+    const el = document.getElementById('fac-timer');
+    el.textContent = `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+    el.className = 'fac-timer' + (timerSec < 300 ? ' danger' : timerSec < 600 ? ' warning' : '');
+  }, 1000);
+}
+
+function toggleTimer() { timerPaused = !timerPaused; }
+
+// ══════════════════════════════════════
+// LOG HELPER
+// ══════════════════════════════════════
+function addLog(s, player, action, pts) {
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  s.log = s.log || [];
+  s.log.push({ time, player, action, pts });
+  if (s.log.length > 100) s.log = s.log.slice(-100);
+}
+
+// ══════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════
+function roleLabel(r) {
+  const m = { lider:'Líder clínico', farmaco:'Farmacólogo', instrumentista:'Instrumentista', ebm:'Vigilante EBM', vocero:'Vocero' };
+  return m[r] || r;
+}
+
+let notifTimer = null;
+function showNotif(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  if (notifTimer) clearTimeout(notifTimer);
+  notifTimer = setTimeout(() => el.classList.add('hidden'), 2800);
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('fac') === '1') {
+    goTo('facilitator');
+    initFacilitator();
+    return;
+  }
+  if (myPlayer) {
+    goTo('player');
+    loadSession().then(s => {
+      renderPlayer(s);
+      startPlayerPoll();
+    });
+    return;
+  }
+  goTo('welcome');
+});
+
+document.getElementById('screen-facilitator').addEventListener('click', e => {
+  if (e.target.closest('#screen-facilitator') && !facPollInt) {
+    initFacilitator();
+  }
+});
+</script>
+</body>
+</html>
